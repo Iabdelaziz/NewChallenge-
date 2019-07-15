@@ -1,4 +1,4 @@
-# NewChallenge
+# NewProject
 
 ## Dockerize a Ruby on Rails application and deploy it on kubernates .  
 Refrence  : https://semaphoreci.com/community/tutorials/dockerizing-a-ruby-on-rails-application
@@ -351,7 +351,7 @@ The next step is to replace the app/views/pages/home.html.erb file to look as fo
 
 ```ruby
 <h1>The meaning of life is <%= @meaning_of_life %></h1>
-<h1>New Unicorn --></h1>
+<h1>New Project --></h1>
 ```
 
 
