@@ -1,0 +1,195 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name:  drkiq
+spec:
+  selector:
+    app: newunicorn
+    type: drkiq
+  type:  LoadBalancer 
+  ports:
+  - name:  app-port
+    port:  80
+    targetPort:  8000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name:  postgres
+spec:
+  selector:
+    app: newproject
+    type: postgres
+  type:   ClusterIP 
+  ports:
+  - name:  db-port
+    port:  5432
+    targetPort:  5432
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name:  redis
+spec:
+  selector:
+    app: newproject
+    type: redis
+  type:   ClusterIP 
+  ports:
+  - name:  db-port
+    port:  6379
+    targetPort:  6379
+   
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: drkiq-redis
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "10Gi"
+      
+--- 
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: drkiq-postgres
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "10Gi"
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drkiqenv
+  labels:
+    app: newunicorn
+data:
+  WORKER_PROCESSES: "1"
+  LISTEN_ON: 0.0.0.0:8000
+  DATABASE_URL: postgresql://drkiq:yourpassword@postgres:5432/drkiq?encoding=utf8&pool=5&timeout=5000
+  CACHE_URL: redis://redis:6379/0
+  JOB_WORKER_URL: redis://redis:6379/0
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name:  token
+data:
+   SECRET_TOKEN: YXNlY3VyZXRva2Vud291bGRub3JtYWxseWdvaGVyZQo=
+type: Opaque
+---
+
+
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: newproject
+        type: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:9.4.5
+        volumeMounts:
+        - mountPath: /var/lib/redis/data
+          name: drkiq-postgres-data
+        env:
+          - name: POSTGRES_USER
+            value: drkiq
+          - name: POSTGRES_PASSWORD
+            value: yourpassword
+      volumes:
+        - name: drkiq-postgres-data
+          persistentVolumeClaim:
+            claimName: drkiq-postgres
+             
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: newunicorn
+        type: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:3.0.5
+        volumeMounts:
+        - mountPath: /var/lib/redis/data
+          name: drkiq-redis-data
+      volumes:
+        - name: drkiq-redis-data
+          persistentVolumeClaim:
+            claimName: drkiq-redis
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: drkiq
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: newproject
+        type: drkiq
+    spec:
+      containers:
+      - name: drkiq
+        image: aymanbehery/newunicorn:latest
+        imagePullPolicy: Always
+        env:
+          - name:  SECRET_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name:  token
+                key:  SECRET_TOKEN
+          - name: WORKER_PROCESSES
+            valueFrom:
+              configMapKeyRef:
+                name: drkiqenv
+                key: WORKER_PROCESSES
+          - name: JOB_WORKER_URL
+            valueFrom:
+              configMapKeyRef:
+                name: drkiqenv
+                key: JOB_WORKER_URL
+          - name: CACHE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: drkiqenv
+                key: CACHE_URL
+          - name: LISTEN_ON
+            valueFrom:
+              configMapKeyRef:
+                name: drkiqenv
+                key: LISTEN_ON
+          - name: DATABASE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: drkiqenv
+                key: DATABASE_URL
+              
