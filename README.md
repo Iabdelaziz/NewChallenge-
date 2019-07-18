@@ -351,7 +351,7 @@ The next step is to replace the app/views/pages/home.html.erb file to look as fo
 
 ```ruby
 <h1>The meaning of life is <%= @meaning_of_life %></h1>
-<h1>New Project --></h1>
+<h1>New unicorn --></h1>
 ```
 
 
