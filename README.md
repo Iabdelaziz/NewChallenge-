@@ -1,4 +1,4 @@
-# NewProject
+# newunicorn
 
 ## Dockerize a Ruby on Rails application and deploy it on kubernates .  
 Refrence  : https://semaphoreci.com/community/tutorials/dockerizing-a-ruby-on-rails-application
